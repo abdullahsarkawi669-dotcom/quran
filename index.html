@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al-Qur'an per Halaman</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap');
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4ebd9; /* Warna kertas */
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 15px;
+            cursor: pointer;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button:hover { background-color: #1a252f; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+
+        input[type="number"] {
+            width: 60px;
+            padding: 8px;
+            text-align: center;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .quran-page {
+            width: 100%;
+            max-width: 600px;
+            background-color: #fffff8;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            border: 2px solid #e1d3b1;
+            min-height: 800px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .quran-line {
+            font-family: 'Amiri Quran', serif;
+            font-size: 28px;
+            text-align: justify;
+            text-align-last: center; /* Membuat baris teks rata tengah/penuh seperti mushaf */
+            direction: rtl;
+            line-height: 1.8;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .surah-header {
+            font-family: 'Amiri Quran', serif;
+            text-align: center;
+            background-color: #e1d3b1;
+            margin: 10px 0;
+            padding: 5px;
+            font-size: 24px;
+            border-radius: 4px;
+            border: 1px solid #c8b792;
+        }
+
+        .bismillah-header {
+            text-align: center;
+            font-family: 'Amiri Quran', serif;
+            font-size: 26px;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            font-size: 20px;
+            color: #555;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <button id="prevBtn" onclick="changePage(-1)">&#9664; Halaman Sebelumnya</button>
+        <div>
+            Halaman <input type="number" id="pageInput" min="1" max="604" value="1" onchange="jumpToPage()"> / 604
+        </div>
+        <button id="nextBtn" onclick="changePage(1)">Halaman Selanjutnya &#9654;</button>
+    </div>
+
+    <div id="loading" class="loading">Memuat dataset Al-Qur'an...</div>
+
+    <div id="quranContainer" class="quran-page" style="display: none;">
+        </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script>
+        let quranLines = [];
+        let pageAyahCounts = [];
+        let pageMap = {}; // Struktur data: { 1: [ baris1, baris2... ], 2: [...] }
+        let currentPage = 1;
+
+        // Karakter penanda akhir ayat dalam Unicode Arab (contoh: ١, ٢, ٣)
+        const arabicNumbersRegex = /[\u0660-\u0669]/g; 
+
+        async function loadData() {
+            try {
+                // 1. Load pages.csv
+                const pagesRes = await fetch('pages.csv');
+                const pagesText = await pagesRes.text();
+                Papa.parse(pagesText, {
+                    complete: function(results) {
+                        // Ambil kolom ke-2 (index 1) sebagai jumlah ayat per halaman
+                        pageAyahCounts = results.data.map(row => parseInt(row[1])).filter(n => !isNaN(n));
+                    }
+                });
+
+                // 2. Load quranbylines.csv
+                const quranRes = await fetch('quranbylines.csv');
+                const quranText = await quranRes.text();
+                Papa.parse(quranText, {
+                    complete: function(results) {
+                        quranLines = results.data;
+                        processPages();
+                    }
+                });
+
+            } catch (error) {
+                document.getElementById('loading').innerText = "Gagal memuat data. Pastikan pages.csv dan quranbylines.csv ada di folder yang sama.";
+                console.error(error);
+            }
+        }
+
+        function processPages() {
+            let currentAyahCount = 0;
+            let targetAyahsForCurrentPage = pageAyahCounts[0]; // Mulai halaman 1
+            let pageNum = 1;
+            pageMap[pageNum] = [];
+
+            for (let i = 0; i < quranLines.length; i++) {
+                const row = quranLines[i];
+                if (!row || row.length < 4) continue;
+
+                const text = row[3];
+                // Deteksi apakah baris ini header Surah (biasanya diakhiri kata "سُورَةُ..." tanpa ayat)
+                const isHeader = text.includes('سُورَةُ') && !text.match(arabicNumbersRegex);
+                const isBismillah = text.includes('بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ') && !text.match(arabicNumbersRegex);
+
+                pageMap[pageNum].push({
+                    text: text,
+                    isHeader: isHeader,
+                    isBismillah: isBismillah
+                });
+
+                // Hitung berapa banyak tanda akhir ayat di baris ini
+                // Tanda akhir ayat di dataset ini biasanya adalah angka Arab
+                const ayahsInLine = text.match(arabicNumbersRegex);
+                
+                if (ayahsInLine && !isHeader && !isBismillah) {
+                    // Karena satu angka arab bisa bernilai belasan (misal ١٥ untuk 15),
+                    // kita perlu mengekstrak digit yang membentuk angka utuh (menggunakan spasial/kelompok).
+                    // Asumsi: jumlah angka terpisah = jumlah akhir ayat di baris tersebut
+                    // Regex ini menangkap blok angka Arab secara berurutan
+                    const distinctAyahs = text.match(/[\u0660-\u0669]+/g);
+                    if (distinctAyahs) {
+                        currentAyahCount += distinctAyahs.length;
+                    }
+                }
+
+                // Jika jumlah ayat yang terhitung sudah mencapai target ayat di halaman tersebut
+                if (currentAyahCount >= targetAyahsForCurrentPage) {
+                    pageNum++;
+                    if (pageNum > 604) break;
+                    pageMap[pageNum] = [];
+                    currentAyahCount = 0; // Reset untuk halaman berikutnya
+                    targetAyahsForCurrentPage = pageAyahCounts[pageNum - 1]; 
+                }
+            }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('quranContainer').style.display = 'flex';
+            renderPage(1);
+        }
+
+        function renderPage(pageNum) {
+            currentPage = pageNum;
+            document.getElementById('pageInput').value = pageNum;
+            
+            const container = document.getElementById('quranContainer');
+            container.innerHTML = '';
+
+            const lines = pageMap[pageNum];
+            if (!lines) {
+                container.innerHTML = '<div style="text-align:center;">Halaman tidak ditemukan.</div>';
+                return;
+            }
+
+            lines.forEach(lineData => {
+                const div = document.createElement('div');
+                div.className = 'quran-line';
+                
+                if (lineData.isHeader) {
+                    div.className = 'surah-header';
+                } else if (lineData.isBismillah) {
+                    div.className = 'bismillah-header';
+                }
+
+                // Hapus angka 0/nol di awal Bismillah jika ada (terkadang dataset bawaan menaruh 0)
+                let finalText = lineData.text.replace(/^٠/, ''); 
+                div.innerText = finalText;
+                container.appendChild(div);
+            });
+
+            // Update tombol
+            document.getElementById('prevBtn').disabled = (pageNum === 1);
+            document.getElementById('nextBtn').disabled = (pageNum === 604);
+        }
+
+        function changePage(delta) {
+            let newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= 604) {
+                renderPage(newPage);
+            }
+        }
+
+        function jumpToPage() {
+            let input = parseInt(document.getElementById('pageInput').value);
+            if (input >= 1 && input <= 604) {
+                renderPage(input);
+            } else {
+                document.getElementById('pageInput').value = currentPage; // reset jika tidak valid
+            }
+        }
+
+        // Mulai aplikasi
+        window.onload = loadData;
+    </script>
+</body>
+</html>
