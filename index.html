@@ -52,9 +52,9 @@
 
         .quran-page {
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             background-color: #fffff8;
-            padding: 30px;
+            padding: 40px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             border-radius: 8px;
             border: 2px solid #e1d3b1;
@@ -63,33 +63,46 @@
             flex-direction: column;
         }
 
-        .quran-line {
+        .quran-text-container {
             font-family: 'Amiri Quran', serif;
-            font-size: 28px;
+            font-size: 30px;
             text-align: justify;
-            text-align-last: center; /* Membuat baris teks rata tengah/penuh seperti mushaf */
             direction: rtl;
-            line-height: 1.8;
+            line-height: 2.2;
             color: #2c3e50;
-            margin-bottom: 5px;
+        }
+
+        .ayah-text {
+            display: inline;
         }
 
         .surah-header {
-            font-family: 'Amiri Quran', serif;
+            font-family: 'Arial', sans-serif;
             text-align: center;
             background-color: #e1d3b1;
-            margin: 10px 0;
-            padding: 5px;
-            font-size: 24px;
+            margin: 25px 0 15px 0;
+            padding: 10px;
+            font-size: 22px;
+            font-weight: bold;
             border-radius: 4px;
             border: 1px solid #c8b792;
+            color: #4a3f28;
+            direction: ltr; /* Teks nama surah huruf latin */
         }
 
         .bismillah-header {
             text-align: center;
             font-family: 'Amiri Quran', serif;
-            font-size: 26px;
-            margin-bottom: 10px;
+            font-size: 30px;
+            margin: 10px 0 20px 0;
+            direction: rtl;
+            color: #2c3e50;
+        }
+
+        .ayah-number {
+            color: #8c7a50;
+            font-size: 24px;
+            margin: 0 5px;
         }
 
         .loading {
@@ -102,42 +115,55 @@
 <body>
 
     <div class="controls">
-        <button id="prevBtn" onclick="changePage(-1)">&#9664; Halaman Sebelumnya</button>
+        <button id="prevBtn" onclick="changePage(-1)">&#9664; Sebelumnya</button>
         <div>
-            Halaman <input type="number" id="pageInput" min="1" max="604" value="1" onchange="jumpToPage()"> / 604
+            Hal. <input type="number" id="pageInput" min="1" max="604" value="1" onchange="jumpToPage()"> / 604
         </div>
-        <button id="nextBtn" onclick="changePage(1)">Halaman Selanjutnya &#9654;</button>
+        <button id="nextBtn" onclick="changePage(1)">Selanjutnya &#9654;</button>
     </div>
 
     <div id="loading" class="loading">Memuat dataset Al-Qur'an...</div>
 
     <div id="quranContainer" class="quran-page" style="display: none;">
-        </div>
+        <!-- Teks Al-Qur'an akan dirender di sini -->
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script>
         let quranLines = [];
         let pageAyahCounts = [];
-        let pageMap = {}; // Struktur data: { 1: [ baris1, baris2... ], 2: [...] }
+        let pageMap = {}; 
         let currentPage = 1;
 
-        // Karakter penanda akhir ayat dalam Unicode Arab (contoh: ١, ٢, ٣)
-        const arabicNumbersRegex = /[\u0660-\u0669]/g; 
+        // Daftar Nama Surah untuk Header
+        const surahNames = [
+            "Al-Fatihah", "Al-Baqarah", "Ali 'Imran", "An-Nisa'", "Al-Ma'idah", "Al-An'am", "Al-A'raf", "Al-Anfal", "At-Tawbah", "Yunus",
+            "Hud", "Yusuf", "Ar-Ra'd", "Ibrahim", "Al-Hijr", "An-Nahl", "Al-Isra'", "Al-Kahf", "Maryam", "Ta-Ha",
+            "Al-Anbiya'", "Al-Hajj", "Al-Mu'minun", "An-Nur", "Al-Furqan", "Ash-Shu'ara'", "An-Naml", "Al-Qasas", "Al-'Ankabut", "Ar-Rum",
+            "Luqman", "As-Sajdah", "Al-Ahzab", "Saba'", "Fatir", "Ya-Sin", "As-Saffat", "Sad", "Az-Zumar", "Ghafir",
+            "Fussilat", "Ash-Shura", "Az-Zukhruf", "Ad-Dukhan", "Al-Jathiyah", "Al-Ahqaf", "Muhammad", "Al-Fath", "Al-Hujurat", "Qaf",
+            "Ad-Dhariyat", "At-Tur", "An-Najm", "Al-Qamar", "Ar-Rahman", "Al-Waqi'ah", "Al-Hadid", "Al-Mujadilah", "Al-Hashr", "Al-Mumtahanah",
+            "As-Saff", "Al-Jumu'ah", "Al-Munafiqun", "At-Taghabun", "At-Talaq", "At-Tahrim", "Al-Mulk", "Al-Qalam", "Al-Haqqah", "Al-Ma'arij",
+            "Nuh", "Al-Jinn", "Al-Muzzammil", "Al-Muddaththir", "Al-Qiyamah", "Al-Insan", "Al-Mursalat", "An-Naba'", "An-Nazi'at", "'Abasa",
+            "At-Takwir", "Al-Infitar", "Al-Mutaffifin", "Al-Inshiqaq", "Al-Buruj", "At-Tariq", "Al-A'la", "Al-Ghashiyah", "Al-Fajr", "Al-Balad",
+            "Ash-Shams", "Al-Lail", "Ad-Duha", "Ash-Sharh", "At-Tin", "Al-'Alaq", "Al-Qadr", "Al-Bayyinah", "Az-Zalzalah", "Al-'Adiyat",
+            "Al-Qari'ah", "At-Takathur", "Al-'Asr", "Al-Humazah", "Al-Fil", "Quraish", "Al-Ma'un", "Al-Kawthar", "Al-Kafirun", "An-Nasr",
+            "Al-Masad", "Al-Ikhlas", "Al-Falaq", "An-Nas"
+        ];
 
         async function loadData() {
             try {
-                // 1. Load pages.csv
-                const pagesRes = await fetch('pages.csv');
+                // 1. Load pages_2.csv
+                const pagesRes = await fetch('pages_2.csv');
                 const pagesText = await pagesRes.text();
                 Papa.parse(pagesText, {
                     complete: function(results) {
-                        // Ambil kolom ke-2 (index 1) sebagai jumlah ayat per halaman
                         pageAyahCounts = results.data.map(row => parseInt(row[1])).filter(n => !isNaN(n));
                     }
                 });
 
-                // 2. Load quranbylines.csv
-                const quranRes = await fetch('quranbylines.csv');
+                // 2. Load quranuthmanitanzil.csv
+                const quranRes = await fetch('quranuthmanitanzil.csv');
                 const quranText = await quranRes.text();
                 Papa.parse(quranText, {
                     complete: function(results) {
@@ -147,53 +173,36 @@
                 });
 
             } catch (error) {
-                document.getElementById('loading').innerText = "Gagal memuat data. Pastikan pages.csv dan quranbylines.csv ada di folder yang sama.";
+                document.getElementById('loading').innerText = "Gagal memuat data. Jalankan via Live Server.";
                 console.error(error);
             }
         }
 
         function processPages() {
             let currentAyahCount = 0;
-            let targetAyahsForCurrentPage = pageAyahCounts[0]; // Mulai halaman 1
+            let targetAyahsForCurrentPage = pageAyahCounts[0]; 
             let pageNum = 1;
             pageMap[pageNum] = [];
 
+            // Membaca baris demi baris per ayat
             for (let i = 0; i < quranLines.length; i++) {
                 const row = quranLines[i];
-                if (!row || row.length < 4) continue;
-
-                const text = row[3];
-                // Deteksi apakah baris ini header Surah (biasanya diakhiri kata "سُورَةُ..." tanpa ayat)
-                const isHeader = text.includes('سُورَةُ') && !text.match(arabicNumbersRegex);
-                const isBismillah = text.includes('بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ') && !text.match(arabicNumbersRegex);
+                if (!row || row.length < 3) continue;
 
                 pageMap[pageNum].push({
-                    text: text,
-                    isHeader: isHeader,
-                    isBismillah: isBismillah
+                    surah: parseInt(row[0]),
+                    ayah: parseInt(row[1]),
+                    text: row[2]
                 });
 
-                // Hitung berapa banyak tanda akhir ayat di baris ini
-                // Tanda akhir ayat di dataset ini biasanya adalah angka Arab
-                const ayahsInLine = text.match(arabicNumbersRegex);
-                
-                if (ayahsInLine && !isHeader && !isBismillah) {
-                    // Karena satu angka arab bisa bernilai belasan (misal ١٥ untuk 15),
-                    // kita perlu mengekstrak digit yang membentuk angka utuh (menggunakan spasial/kelompok).
-                    // Asumsi: jumlah angka terpisah = jumlah akhir ayat di baris tersebut
-                    // Regex ini menangkap blok angka Arab secara berurutan
-                    const distinctAyahs = text.match(/[\u0660-\u0669]+/g);
-                    if (distinctAyahs) {
-                        currentAyahCount += distinctAyahs.length;
-                    }
-                }
+                currentAyahCount++;
 
-                // Jika jumlah ayat yang terhitung sudah mencapai target ayat di halaman tersebut
+                // Pindah halaman jika kuota ayat untuk halaman ini sudah terpenuhi
                 if (currentAyahCount >= targetAyahsForCurrentPage) {
                     pageNum++;
                     if (pageNum > 604) break;
                     pageMap[pageNum] = [];
-                    currentAyahCount = 0; // Reset untuk halaman berikutnya
+                    currentAyahCount = 0;
                     targetAyahsForCurrentPage = pageAyahCounts[pageNum - 1]; 
                 }
             }
@@ -203,6 +212,11 @@
             renderPage(1);
         }
 
+        // Fungsi mengubah angka latin ke angka Arab
+        function toArabicNumber(num) {
+            return num.toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+        }
+
         function renderPage(pageNum) {
             currentPage = pageNum;
             document.getElementById('pageInput').value = pageNum;
@@ -210,26 +224,55 @@
             const container = document.getElementById('quranContainer');
             container.innerHTML = '';
 
-            const lines = pageMap[pageNum];
-            if (!lines) {
+            const ayahs = pageMap[pageNum];
+            if (!ayahs || ayahs.length === 0) {
                 container.innerHTML = '<div style="text-align:center;">Halaman tidak ditemukan.</div>';
                 return;
             }
 
-            lines.forEach(lineData => {
-                const div = document.createElement('div');
-                div.className = 'quran-line';
-                
-                if (lineData.isHeader) {
-                    div.className = 'surah-header';
-                } else if (lineData.isBismillah) {
-                    div.className = 'bismillah-header';
+            // Teks Bismillah standar di dataset ini
+            const bismillahText = "بِسمِ اللَّهِ الرَّحمٰنِ الرَّحيمِ";
+
+            ayahs.forEach(ayahData => {
+                // Buat Header Surah jika ini adalah Ayat 1
+                if (ayahData.ayah === 1) {
+                    const surahHeader = document.createElement('div');
+                    surahHeader.className = 'surah-header';
+                    surahHeader.innerText = "Surah " + surahNames[ayahData.surah - 1];
+                    container.appendChild(surahHeader);
                 }
 
-                // Hapus angka 0/nol di awal Bismillah jika ada (terkadang dataset bawaan menaruh 0)
-                let finalText = lineData.text.replace(/^٠/, ''); 
-                div.innerText = finalText;
-                container.appendChild(div);
+                let textToDisplay = ayahData.text;
+
+                // Pisahkan Bismillah dari teks ayat 1 agar bisa ditaruh di tengah
+                // (Pengecualian: Surah Al-Fatihah, karena Bismillah adalah ayat ke-1 yang utuh)
+                if (ayahData.ayah === 1 && ayahData.surah !== 1 && textToDisplay.startsWith(bismillahText)) {
+                    const bismillahDiv = document.createElement('div');
+                    bismillahDiv.className = 'bismillah-header';
+                    bismillahDiv.innerText = bismillahText;
+                    container.appendChild(bismillahDiv);
+                    
+                    // Hilangkan Bismillah dari sisa teks ayatnya
+                    textToDisplay = textToDisplay.replace(bismillahText, '').trim();
+                }
+
+                // Masukkan teks ayat yang bersambung ke kontainer khusus
+                let pageContent = document.getElementById('pageContent' + pageNum);
+                if (!pageContent || ayahData.ayah === 1) {
+                    pageContent = document.createElement('div');
+                    pageContent.id = 'pageContent' + pageNum;
+                    pageContent.className = 'quran-text-container';
+                    container.appendChild(pageContent);
+                }
+
+                // Merangkai teks ayat dengan simbol angka Arab di ujungnya
+                const span = document.createElement('span');
+                span.className = 'ayah-text';
+                
+                const ayahNumber = toArabicNumber(ayahData.ayah);
+                span.innerHTML = textToDisplay + `<span class="ayah-number"> ﴿${ayahNumber}﴾ </span>`;
+                
+                pageContent.appendChild(span);
             });
 
             // Update tombol
@@ -237,23 +280,6 @@
             document.getElementById('nextBtn').disabled = (pageNum === 604);
         }
 
-        function changePage(delta) {
-            let newPage = currentPage + delta;
-            if (newPage >= 1 && newPage <= 604) {
-                renderPage(newPage);
-            }
-        }
-
-        function jumpToPage() {
-            let input = parseInt(document.getElementById('pageInput').value);
-            if (input >= 1 && input <= 604) {
-                renderPage(input);
-            } else {
-                document.getElementById('pageInput').value = currentPage; // reset jika tidak valid
-            }
-        }
-
-        // Mulai aplikasi
         window.onload = loadData;
     </script>
 </body>
