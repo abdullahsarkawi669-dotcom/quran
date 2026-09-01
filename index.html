@@ -214,7 +214,7 @@
 
         async function loadData() {
             try {
-                const quranRes = await fetch('quranbylines_2.csv');
+                const quranRes = await fetch('quranbylines.csv');
                 const quranText = await quranRes.text();
                 Papa.parse(quranText, {
                     complete: function(results) {
