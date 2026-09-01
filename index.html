@@ -53,7 +53,6 @@
             font-size: 15px;
             font-weight: 600;
             transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
         button:hover:not(:disabled) { 
@@ -64,16 +63,6 @@
         button:disabled { 
             background-color: #cccccc; 
             cursor: not-allowed; 
-            box-shadow: none;
-        }
-
-        .page-indicator {
-            font-size: 16px;
-            font-weight: 600;
-            color: #444;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
         input[type="number"] {
@@ -87,70 +76,100 @@
             background-color: #f9f9f9;
         }
 
-        /* Container Halaman */
+        /* Container Halaman (Kertas) */
         .quran-page {
             width: 100%;
-            max-width: 550px; /* Ukuran proporsional mushaf */
+            max-width: 600px;
             background-color: var(--paper-bg);
-            padding: 25px 35px;
+            padding: 30px 40px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
             border-radius: 4px;
             border: 1px solid var(--paper-border);
-            min-height: 80vh;
+            
+            /* Tinggi minimum dibuat proporsional dan Flexbox digunakan agar baris menyebar rata (space-between) */
+            min-height: 85vh;
             display: flex;
             flex-direction: column;
-            justify-content: center; /* Teks ada di tengah vertikal */
+            justify-content: space-between; 
             box-sizing: border-box;
-            transition: all 0.4s ease;
+            overflow: hidden;
         }
 
-        /* Border Khusus Halaman 1 dan 2 (Al-Fatihah & Awal Al-Baqarah) */
+        /* Border Khusus Halaman 1 dan 2 */
         .special-border {
             border: 20px solid transparent;
             border-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect x="5" y="5" width="90" height="90" fill="none" stroke="%23b5985a" stroke-width="2"/><rect x="10" y="10" width="80" height="80" fill="none" stroke="%23b5985a" stroke-width="4"/><circle cx="10" cy="10" r="5" fill="%23b5985a"/><circle cx="90" cy="10" r="5" fill="%23b5985a"/><circle cx="10" cy="90" r="5" fill="%23b5985a"/><circle cx="90" cy="90" r="5" fill="%23b5985a"/></svg>') 20 stretch;
-            padding: 40px 30px;
+            padding: 50px 35px;
             background-color: #fdfaf6;
             box-shadow: inset 0 0 20px rgba(181, 152, 90, 0.1);
         }
 
-        .quran-line {
-            font-family: 'Amiri Quran', serif;
-            font-size: clamp(22px, 4vw, 28px); /* Responsif terhadap layar */
-            text-align: justify;
-            text-align-last: justify; /* MEMBUAT TEKS RATA KIRI-KANAN PENUH */
-            direction: rtl;
-            line-height: 1.9;
-            color: var(--text-color);
-            margin: 0;
-            padding: 0;
+        /* Kontainer untuk setiap baris agar bisa diukur ukurannya */
+        .quran-line-container {
             width: 100%;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
         }
 
-        /* Baris terakhir ayat di halaman biasanya tidak dipaksa rata penuh jika tidak sampai ujung */
-        .quran-line.last-line {
+        /* Teks dalam baris */
+        .quran-line-text {
+            font-family: 'Amiri Quran', serif;
+            font-size: clamp(24px, 4.5vw, 30px);
+            text-align-last: justify;
+            direction: rtl;
+            color: var(--text-color);
+            width: 100%;
+            white-space: nowrap; /* Memaksa teks tidak turun ke baris baru */
+            transform-origin: center; /* Pusat pengecilan saat teks kepanjangan */
+        }
+
+        /* Pengecualian rata penuh untuk baris paling akhir */
+        .last-line {
             text-align-last: center; 
         }
 
+        /* Header Nama Surah */
         .surah-header {
             font-family: 'Amiri Quran', serif;
             text-align: center;
-            text-align-last: center;
             background: linear-gradient(90deg, transparent, var(--header-bg), transparent);
-            margin: 15px 0;
-            padding: 8px;
-            font-size: clamp(20px, 3.5vw, 24px);
+            padding: 5px;
+            font-size: clamp(22px, 4vw, 26px);
             border-top: 2px solid var(--accent-color);
             border-bottom: 2px solid var(--accent-color);
             color: #3e321b;
+            width: 100%;
         }
 
-        .bismillah-header {
-            text-align: center;
-            text-align-last: center;
+        /* Desain Khusus Bismillah (Tengah dengan Border Kiri Kanan) */
+        .bismillah-header-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin: 5px 0;
+            direction: rtl;
+        }
+
+        .bismillah-text {
             font-family: 'Amiri Quran', serif;
             font-size: clamp(22px, 4vw, 26px);
-            margin-bottom: 10px;
             color: var(--text-color);
+            padding: 0 15px;
+            border-left: 2px solid var(--accent-color);
+            border-right: 2px solid var(--accent-color);
+            white-space: nowrap;
+        }
+
+        /* Garis memanjang di samping bismillah */
+        .bismillah-header-container::before, 
+        .bismillah-header-container::after {
+            content: "";
+            flex-grow: 1;
+            height: 1.5px;
+            background-color: var(--accent-color);
+            opacity: 0.4;
         }
 
         .loading {
@@ -160,26 +179,15 @@
             background: white;
             padding: 20px 40px;
             border-radius: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
         @media (max-width: 600px) {
             .quran-page {
-                padding: 15px;
-                border-image-width: 10px;
+                padding: 20px 15px;
+                border-image-width: 15px;
+                min-height: 80vh;
             }
-            .special-border {
-                padding: 30px 15px;
-            }
-            .controls {
-                width: 90%;
-                gap: 10px;
-                padding: 10px;
-            }
-            button {
-                padding: 8px 12px;
-                font-size: 13px;
-            }
+            .special-border { padding: 35px 15px; }
         }
     </style>
 </head>
@@ -187,42 +195,35 @@
 
     <div class="controls">
         <button id="prevBtn" onclick="changePage(-1)">&#9664; Seb</button>
-        <div class="page-indicator">
+        <div style="font-size: 16px; font-weight: bold; color: #444;">
             Hal. <input type="number" id="pageInput" min="1" value="1" onchange="jumpToPage()"> / <span id="totalPages">...</span>
         </div>
         <button id="nextBtn" onclick="changePage(1)">Sel &#9654;</button>
     </div>
 
     <div id="loading" class="loading">Memuat dataset Al-Qur'an...</div>
-
-    <div id="quranContainer" class="quran-page" style="display: none;">
-        <!-- Teks dirender di sini -->
-    </div>
+    <div id="quranContainer" class="quran-page" style="display: none;"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script>
         let quranLines = [];
-        let pageMap = {}; // Format: { 1: [ baris... ], 2: [ baris... ] }
+        let pageMap = {}; 
         let currentPage = 1;
         let maxPage = 1;
-
         const arabicNumbersRegex = /[\u0660-\u0669]/g; 
 
         async function loadData() {
             try {
-                // Mengambil data dari quranbylines.csv
-                const quranRes = await fetch('quranbylines.csv');
+                const quranRes = await fetch('quranbylines_2.csv');
                 const quranText = await quranRes.text();
                 Papa.parse(quranText, {
                     complete: function(results) {
-                        // Membuang baris kosong
                         quranLines = results.data.filter(row => row && row.length >= 4 && row[3].trim() !== '');
                         processPagesByLineCount();
                     }
                 });
-
             } catch (error) {
-                document.getElementById('loading').innerText = "Gagal memuat. Pastikan quranbylines.csv ada dan jalankan via Live Server.";
+                document.getElementById('loading').innerText = "Gagal memuat. Pastikan quranbylines_2.csv ada.";
                 console.error(error);
             }
         }
@@ -230,65 +231,44 @@
         function processPagesByLineCount() {
             let pageNum = 1;
             let currentLineCount = 0;
-            let targetLines = 8; // Halaman 1 targetnya 8 baris
+            let targetLines = 8; 
 
             pageMap[pageNum] = [];
 
             for (let i = 0; i < quranLines.length; i++) {
-                const row = quranLines[i];
-                const text = row[3];
-                
-                // Deteksi tipe baris
+                const text = quranLines[i][3];
                 const isHeader = text.includes('سُورَةُ') && !text.match(arabicNumbersRegex);
                 const isBismillah = text.includes('بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ') && !text.match(arabicNumbersRegex);
 
-                pageMap[pageNum].push({
-                    text: text,
-                    isHeader: isHeader,
-                    isBismillah: isBismillah
-                });
-
+                pageMap[pageNum].push({ text, isHeader, isBismillah });
                 currentLineCount++;
 
-                // Jika jumlah baris sudah mencapai target untuk halaman ini
                 if (currentLineCount >= targetLines) {
                     pageNum++;
                     pageMap[pageNum] = [];
                     currentLineCount = 0;
-
-                    // Atur target baris untuk halaman berikutnya
-                    if (pageNum === 2) {
-                        targetLines = 8; // Halaman 2 juga 8 baris
-                    } else {
-                        targetLines = 15; // Halaman 3 dan seterusnya 15 baris
-                    }
+                    targetLines = (pageNum === 2) ? 8 : 15;
                 }
             }
 
-            // Hapus halaman terakhir jika kebetulan kosong karena pembagian
-            if (pageMap[pageNum].length === 0) {
-                delete pageMap[pageNum];
-                maxPage = pageNum - 1;
-            } else {
-                maxPage = pageNum;
-            }
-
+            if (pageMap[pageNum].length === 0) delete pageMap[pageNum];
+            maxPage = Object.keys(pageMap).length;
+            
             document.getElementById('totalPages').innerText = maxPage;
             document.getElementById('pageInput').max = maxPage;
-
             document.getElementById('loading').style.display = 'none';
             document.getElementById('quranContainer').style.display = 'flex';
+            
             renderPage(1);
         }
 
         function renderPage(pageNum) {
             currentPage = pageNum;
             document.getElementById('pageInput').value = pageNum;
-            
             const container = document.getElementById('quranContainer');
             container.innerHTML = '';
 
-            // Terapkan border cantik khusus halaman 1 dan 2
+            // Set background border islami
             if (pageNum === 1 || pageNum === 2) {
                 container.classList.add('special-border');
             } else {
@@ -299,36 +279,75 @@
             if (!lines) return;
 
             lines.forEach((lineData, index) => {
-                const div = document.createElement('div');
-                div.className = 'quran-line';
+                let finalText = lineData.text.replace(/^٠/, '').trim(); 
                 
                 if (lineData.isHeader) {
+                    const div = document.createElement('div');
                     div.className = 'surah-header';
-                } else if (lineData.isBismillah) {
-                    div.className = 'bismillah-header';
+                    div.innerText = finalText;
+                    container.appendChild(div);
+                } 
+                else if (lineData.isBismillah) {
+                    // Struktur Bismillah yang terkurung border
+                    const flexCont = document.createElement('div');
+                    flexCont.className = 'bismillah-header-container';
+                    const span = document.createElement('span');
+                    span.className = 'bismillah-text';
+                    span.innerText = finalText;
+                    flexCont.appendChild(span);
+                    container.appendChild(flexCont);
+                } 
+                else {
+                    // Baris Teks Ayat Standar
+                    const cont = document.createElement('div');
+                    cont.className = 'quran-line-container';
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'quran-line-text';
+                    
+                    // Pengecualian rata tengah untuk baris terakhir jika tidak penuh
+                    if (index === lines.length - 1) textDiv.classList.add('last-line');
+                    
+                    textDiv.innerText = finalText;
+                    cont.appendChild(textDiv);
+                    container.appendChild(cont);
                 }
-
-                // Menangani baris terakhir di halaman agar tidak justify jika terlalu pendek
-                if (index === lines.length - 1 && !lineData.isHeader && !lineData.isBismillah) {
-                    div.classList.add('last-line');
-                }
-
-                // Membersihkan angka nol di awal teks (jika ada dari dataset)
-                let finalText = lineData.text.replace(/^٠/, '').trim(); 
-                div.innerText = finalText;
-                container.appendChild(div);
             });
 
-            // Kontrol tombol navigasi
             document.getElementById('prevBtn').disabled = (pageNum === 1);
             document.getElementById('nextBtn').disabled = (pageNum === maxPage);
+
+            // Tunda sebentar untuk mengizinkan CSS merender, lalu kecilkan (kompres) teks yang kepanjangan
+            setTimeout(fitLongText, 50);
         }
+
+        // FUNGSI KOMPRESI TEKS (Menyempitkan teks yang kepanjangan agar muat 1 baris)
+        function fitLongText() {
+            const lines = document.querySelectorAll('.quran-line-text');
+            lines.forEach(textDiv => {
+                // Reset transform
+                textDiv.style.transform = 'none';
+                
+                const scrollW = textDiv.scrollWidth;
+                const clientW = textDiv.clientWidth;
+                
+                // Jika lebar asli teks lebih besar daripada ruang yang tersedia di layar
+                if (scrollW > clientW && clientW > 0) {
+                    const ratio = clientW / scrollW;
+                    // Sempitkan skala horizontalnya persis sebesar kelebihan lebarnya
+                    textDiv.style.transform = `scaleX(${ratio - 0.01})`; 
+                }
+            });
+        }
+
+        // Jalankan fungsi fitLongText saat ukuran layar (window) diubah orientasinya / di-resize
+        window.addEventListener('resize', () => {
+            setTimeout(fitLongText, 100);
+        });
 
         function changePage(delta) {
             let newPage = currentPage + delta;
-            if (newPage >= 1 && newPage <= maxPage) {
-                renderPage(newPage);
-            }
+            if (newPage >= 1 && newPage <= maxPage) renderPage(newPage);
         }
 
         function jumpToPage() {
